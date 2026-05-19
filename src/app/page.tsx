@@ -2,6 +2,7 @@ import { loadState } from "@/lib/loadState";
 import { HeadlineKPIs } from "@/components/HeadlineKPIs";
 import { HeroChart } from "@/components/HeroChart";
 import { TrajectoryChart } from "@/components/TrajectoryChart";
+import { SmallMultiples } from "@/components/SmallMultiples";
 import { SeeingAxisChart } from "@/components/SeeingAxisChart";
 import { SizeAxisChart } from "@/components/SizeAxisChart";
 import { CoverageMatrix } from "@/components/CoverageMatrix";
@@ -34,7 +35,14 @@ export default async function Home() {
       {/* KPIs — three tiles */}
       <HeadlineKPIs curves={state.xt_curves} />
 
-      {/* Per-run trajectories — Kaplan-style "many curves + envelope" */}
+      {/* Per-task small multiples — Codex Rec C, the HEADLINE evidence.
+          Each panel = one task with its own clean envelope; no cross-task
+          interference. */}
+      <SmallMultiples trajectories={state.trajectories ?? []} minRuns={3} />
+
+      {/* Aggregated per-run trajectories — Kaplan-style multi-curve view
+          across all tasks. Useful as a "summary" but the small-multiples
+          above is the headline. */}
       <TrajectoryChart
         trajectories={state.trajectories ?? []}
         envelope={state.envelope ?? []}
