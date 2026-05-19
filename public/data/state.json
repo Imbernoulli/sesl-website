@@ -1,6 +1,6 @@
 {
-  "generated_at_iso": "2026-05-19T09:03:29Z",
-  "git_sha": "5683cd4dffd2",
+  "generated_at_iso": "2026-05-19T09:11:57Z",
+  "git_sha": "eb57338aefc7",
   "project_summary": "SESL measures how LLM-driven evolutionary code search scales with Trying (K, W, D), Thinking (T), Seeing (feedback F0-F4 / history H0-H5), and proposer model size. It fits regret power laws R(K) = R_inf + A * K^-alpha on a deterministic objective task suite (circle packing variants + TSP / Max-Cut / Rastrigin) using Qwen3.6-35B-A3B (MoE) and Qwen3.5-4B (dense) served locally via vLLM.",
   "servers": [
     {
@@ -78,7 +78,7 @@
     {
       "name": "phase3",
       "pid": 3718612,
-      "status": "running",
+      "status": "stopped",
       "log_lines": 88,
       "latest_log_tail": [
         "[1/45] rc=0 0.2s circle_n31 :: ['SKIP completed circle_n31_Qwen3635BA3B_archive_K256_T8192_W8_F0_H0_p1t0_ffe05c_s0']",
@@ -134,7 +134,7 @@
     {
       "name": "scaling",
       "pid": 3718618,
-      "status": "running",
+      "status": "stopped",
       "log_lines": 123,
       "latest_log_tail": [
         "[13/640] rc=0 0.3s rastrigin8 :: ['SKIP completed rastrigin8_Qwen3635BA3B_archive_K16_T32768_W8_F2_H3_p0t1_3abf24_s0']",
@@ -162,7 +162,7 @@
     {
       "name": "size4b",
       "pid": 1548557,
-      "status": "running",
+      "status": "stopped",
       "log_lines": 8,
       "latest_log_tail": [
         "[grid size4b] 320 runs, max_parallel=5",
