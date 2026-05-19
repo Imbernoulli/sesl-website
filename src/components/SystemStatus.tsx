@@ -1,10 +1,10 @@
 import type { GridStatus, RunCounts, ServerStatus } from "@/lib/types";
 
-function statusBadge(s: string): string {
-  if (s === "ok" || s === "running") return "badge ok";
-  if (s === "live-only" || s === "unknown") return "badge";
-  if (s === "retired" || s === "stopped") return "badge warn";
-  return "badge bad";
+function dot(s: string): string {
+  if (s === "ok" || s === "running") return "bg-emerald-500";
+  if (s === "live-only" || s === "unknown") return "bg-zinc-400";
+  if (s === "retired" || s === "stopped") return "bg-amber-500";
+  return "bg-rose-500";
 }
 
 export function SystemStatus({
@@ -17,60 +17,11 @@ export function SystemStatus({
   counts: RunCounts;
 }) {
   return (
-    <section className="card p-5">
-      <h2 className="text-base font-semibold mb-3">Live system status</h2>
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-wide text-[color:var(--muted-foreground)] mb-2">
-            vLLM servers
-          </div>
-          <ul className="space-y-2">
-            {servers.map((s) => (
-              <li
-                key={s.port}
-                className="flex items-center justify-between text-sm mono"
-              >
-                <span>
-                  :{s.port} <span className="text-[color:var(--muted-foreground)]">{s.model}</span>
-                </span>
-                <span className={statusBadge(s.status)}>
-                  {s.status}
-                  {s.detail ? ` (${s.detail})` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <div className="text-xs uppercase tracking-wide text-[color:var(--muted-foreground)] mb-2">
-            Grids
-          </div>
-          <ul className="space-y-2">
-            {grids.map((g) => (
-              <li key={g.name} className="text-sm">
-                <div className="flex items-center justify-between mono">
-                  <span>
-                    grid_{g.name}
-                    {g.pid ? (
-                      <span className="text-[color:var(--muted-foreground)]"> · pid {g.pid}</span>
-                    ) : null}
-                    <span className="text-[color:var(--muted-foreground)]">
-                      {" "}· {g.log_lines} lines
-                    </span>
-                  </span>
-                  <span className={statusBadge(g.status)}>{g.status}</span>
-                </div>
-                {g.latest_log_tail.length > 0 ? (
-                  <pre className="mt-1 text-[11px] mono bg-[color:var(--muted)] rounded p-2 overflow-x-auto leading-snug">
-                    {g.latest_log_tail.slice(-3).join("\n")}
-                  </pre>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
+    <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-3">
+      <div className="text-xs uppercase tracking-wider text-zinc-500">
+        Operational
       </div>
-      <div className="mt-5 grid grid-cols-3 md:grid-cols-6 gap-3 text-sm">
+      <div className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] tabular-nums text-zinc-700">
         {[
           ["total", counts.total],
           ["completed", counts.completed],
@@ -79,14 +30,46 @@ export function SystemStatus({
           ["ALLINV", counts.allinv],
           ["PART", counts.part],
         ].map(([label, v]) => (
-          <div key={label as string} className="bg-[color:var(--muted)] rounded p-3">
-            <div className="text-[10px] uppercase tracking-wide text-[color:var(--muted-foreground)]">
+          <span key={label as string} className="flex items-center gap-1">
+            <span className="text-zinc-400 uppercase tracking-wider text-[10px]">
               {label}
-            </div>
-            <div className="mono text-lg">{v as number}</div>
-          </div>
+            </span>
+            <span>{v as number}</span>
+          </span>
         ))}
       </div>
-    </section>
+      <div className="grid md:grid-cols-2 gap-3 text-[11px]">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">
+            vLLM servers
+          </div>
+          <ul className="space-y-0.5">
+            {servers.map((s) => (
+              <li key={s.port} className="flex items-center gap-2 tabular-nums">
+                <span className={`w-1.5 h-1.5 rounded-full ${dot(s.status)}`} />
+                <span className="text-zinc-600">:{s.port}</span>
+                <span className="text-zinc-400 truncate">{s.model}</span>
+                <span className="ml-auto text-zinc-500">{s.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">
+            Grids
+          </div>
+          <ul className="space-y-0.5">
+            {grids.map((g) => (
+              <li key={g.name} className="flex items-center gap-2 tabular-nums">
+                <span className={`w-1.5 h-1.5 rounded-full ${dot(g.status)}`} />
+                <span className="text-zinc-600">{g.name}</span>
+                <span className="text-zinc-400">· {g.log_lines}L</span>
+                <span className="ml-auto text-zinc-500">{g.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 }
