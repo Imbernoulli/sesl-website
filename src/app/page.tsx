@@ -1,6 +1,7 @@
 import { loadState } from "@/lib/loadState";
 import { HeadlineKPIs } from "@/components/HeadlineKPIs";
 import { HeroChart } from "@/components/HeroChart";
+import { TrajectoryChart } from "@/components/TrajectoryChart";
 import { SeeingAxisChart } from "@/components/SeeingAxisChart";
 import { SizeAxisChart } from "@/components/SizeAxisChart";
 import { CoverageMatrix } from "@/components/CoverageMatrix";
@@ -33,7 +34,13 @@ export default async function Home() {
       {/* KPIs — three tiles */}
       <HeadlineKPIs curves={state.xt_curves} />
 
-      {/* Hero chart — dominant element */}
+      {/* Per-run trajectories — Kaplan-style "many curves + envelope" */}
+      <TrajectoryChart
+        trajectories={state.trajectories ?? []}
+        envelope={state.envelope ?? []}
+      />
+
+      {/* Aggregate cross-task hero chart */}
       <HeroChart curves={state.xt_curves} />
 
       {/* Two supporting analyses */}

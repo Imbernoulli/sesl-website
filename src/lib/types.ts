@@ -67,6 +67,29 @@ export interface EventEntry {
   detail: string;
 }
 
+// Per-run trajectory: each completed run becomes ONE continuous curve
+// of best-so-far over trials. Downsampled log-spaced points to keep the
+// JSON light. Kaplan/Chinchilla "many curves on one plot" style.
+export interface Trajectory {
+  run: string;
+  model: string;
+  task: string;
+  F: string;
+  H: string;
+  K_max: number;
+  seed: number;
+  n_islands: number;
+  history_depth: number;
+  summary_chars: number;
+  Ks: number[];
+  regret: number[];   // per-task min-max normalized; lower = better
+}
+
+export interface EnvelopePoint {
+  K: number;
+  min_regret: number;
+}
+
 export interface SiteState {
   generated_at_iso: string;
   git_sha: string;
@@ -78,6 +101,8 @@ export interface SiteState {
   xt_dropped_saturated_tasks: string[];
   coverage: CoverageCell[];
   tasks_headline: HeadlineEntry[];
+  trajectories?: Trajectory[];
+  envelope?: EnvelopePoint[];
   phase4_pending: string[];
   events: EventEntry[];
 }
