@@ -5,10 +5,14 @@ const W = 1000;
 const H = 520;
 const PAD = { l: 70, r: 180, t: 36, b: 60 };
 
-// y range for log-y regret. Floor at 5e-3 so the saturated zone is
-// still visible (some runs reach normalized regret ≈ 0). Ceiling 1.0.
-const REGRET_FLOOR = 5e-3;
-const REGRET_CEIL = 1;
+// Y-axis is REL_LOSS = (hi_task − best_at_K) / (hi_task − best_at_K1).
+// Each run starts at 1.0 at K=K_first_valid and decays. Codex review
+// 2026-05-19: the (hi − lo) scale cancels in the ratio so only the
+// theoretical optimum hi_task matters (which is well-defined per task).
+// Floor 1e-4 so converged tails stay visible; ceil 1.5 (slack above 1
+// in case of mild noise at K=1).
+const REGRET_FLOOR = 1e-4;
+const REGRET_CEIL = 1.5;
 
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
@@ -53,9 +57,11 @@ function colorFor(model: string, F: string): {
 export function TrajectoryChart({
   trajectories,
   envelope,
+  envelopeByClass,
 }: {
   trajectories: Trajectory[];
   envelope: EnvelopePoint[];
+  envelopeByClass?: Record<string, EnvelopePoint[]>;
 }) {
   if (!trajectories?.length) {
     return (
@@ -85,7 +91,7 @@ export function TrajectoryChart({
   const sy = logScale([REGRET_CEIL, REGRET_FLOOR], [PAD.t, H - PAD.b]);
 
   const xTicks = pow2Ticks(kMin, kMax);
-  const yTicks = [1, 0.3, 0.1, 0.03, 0.01, 0.005];
+  const yTicks = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001];
 
   // Group runs by (model, F) for the legend.
   const byClass = new Map<
@@ -118,8 +124,13 @@ export function TrajectoryChart({
       </div>
       <p className="text-xs text-zinc-500 mb-2">
         Each faint line is one experiment&apos;s best-so-far trajectory over
-        its K trials. The bold black line is the lower envelope = the best
-        regret reachable at each K across ALL runs (the &quot;tangent&quot; / compute-optimal frontier).
+        its K trials. y = rel_loss = (opt − best_at_K) / (opt −
+        best_at_K=1), anchored to each task&apos;s theoretical optimum (TSP
+        BHH bound, MaxCut all-edges, Rastrigin 0, Packomania optima for
+        circles). Bold colored lines = the per-class lower envelope (one
+        per model × F): the best rel_loss any run in that class achieved
+        at each K — the actual compute-optimal frontier for that
+        condition.
       </p>
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -202,7 +213,7 @@ export function TrajectoryChart({
           fill="#52525b"
           transform={`rotate(-90 18 ${(PAD.t + H - PAD.b) / 2})`}
         >
-          normalized regret (log)
+          rel_loss = (opt − best_K) / (opt − best_1)   (log)
         </text>
 
         {/* All trajectories, faint, drawn first so envelope sits on top */}
@@ -227,26 +238,54 @@ export function TrajectoryChart({
           );
         })}
 
-        {/* Envelope on top */}
+        {/* Per-class envelopes on top: 4 bold lines, one per
+            (model, F). Codex 2026-05-19: global envelope was dominated
+            by one lucky saturated-task run. Per-class is the meaningful
+            frontier. */}
+        {envelopeByClass &&
+          Object.entries(envelopeByClass).map(([key, env]) => {
+            if (!env || env.length < 2) return null;
+            const [model, F] = key.split("|");
+            const s = colorFor(model, F);
+            const pts: Array<[number, number]> = [];
+            for (const e of env) {
+              const r = clamp(e.min_regret, REGRET_FLOOR, REGRET_CEIL);
+              pts.push([sx(e.K), sy(r)]);
+            }
+            return (
+              <g key={`env-${key}`}>
+                <path
+                  d={linePath(pts)}
+                  stroke={s.stroke}
+                  strokeWidth={2.8}
+                  fill="none"
+                  strokeDasharray={s.dashed ? "8 3" : undefined}
+                />
+                {pts.map(([x, y], i) => (
+                  <circle
+                    key={i}
+                    cx={x}
+                    cy={y}
+                    r={3.4}
+                    fill="white"
+                    stroke={s.stroke}
+                    strokeWidth={1.8}
+                  />
+                ))}
+              </g>
+            );
+          })}
+        {/* Faint global envelope (informational, not headline) */}
         {envPts.length > 1 ? (
           <path
             d={linePath(envPts)}
             stroke="#0f172a"
-            strokeWidth={2.6}
+            strokeOpacity={0.32}
+            strokeWidth={1.2}
+            strokeDasharray="2 3"
             fill="none"
           />
         ) : null}
-        {envPts.map(([x, y], i) => (
-          <circle
-            key={`env-${i}`}
-            cx={x}
-            cy={y}
-            r={3.2}
-            fill="white"
-            stroke="#0f172a"
-            strokeWidth={1.6}
-          />
-        ))}
 
         {/* Legend */}
         <g>

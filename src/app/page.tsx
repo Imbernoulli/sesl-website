@@ -38,6 +38,7 @@ export default async function Home() {
       <TrajectoryChart
         trajectories={state.trajectories ?? []}
         envelope={state.envelope ?? []}
+        envelopeByClass={state.envelope_by_class ?? {}}
       />
 
       {/* Aggregate cross-task hero chart */}

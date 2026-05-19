@@ -103,6 +103,9 @@ export interface SiteState {
   tasks_headline: HeadlineEntry[];
   trajectories?: Trajectory[];
   envelope?: EnvelopePoint[];
+  // Per (model, F) envelopes — keyed "Model|F" — so a lucky-run on one
+  // class doesn't drag the visible frontier of others to zero.
+  envelope_by_class?: Record<string, EnvelopePoint[]>;
   phase4_pending: string[];
   events: EventEntry[];
 }
