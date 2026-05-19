@@ -243,10 +243,51 @@ export function SmallMultiples({
     if (arr) arr.push(t);
     else byTask.set(t.task, [t]);
   }
-  // keep tasks with enough runs for the panel to be informative
-  const panels = [...byTask.entries()]
-    .filter(([, runs]) => runs.length >= minRuns)
-    .sort((a, b) => b[1].length - a[1].length);
+  // keep tasks with enough runs for the panel to be informative.
+  // SORT BY SIGNAL STRENGTH: panels whose per-task envelope decays a lot
+  // (real scaling visible) come first; saturated/constant panels last.
+  // The "signal" score = -log10(min_rel_loss) — i.e., how many decades
+  // the envelope drops. Codex implicit prompt (2026-05-19): surface the
+  // panels where the user can SEE the scaling, not where it's invisible.
+  const scoredPanels: Array<{
+    task: string;
+    runs: Trajectory[];
+    signal: number;
+  }> = [];
+  for (const [task, runs] of byTask) {
+    if (runs.length < minRuns) continue;
+    // compute per-task envelope min across all runs
+    const kSet = new Set<number>();
+    for (const r of runs) for (const k of r.Ks) kSet.add(k);
+    const ks = [...kSet].sort((a, b) => a - b);
+    let envMin = 1;
+    for (const k of ks) {
+      let best: number | null = null;
+      for (const r of runs) {
+        let v: number | null = null;
+        for (let i = 0; i < r.Ks.length; i++) {
+          if (r.Ks[i] <= k) v = r.regret[i];
+          else break;
+        }
+        if (v !== null && (best === null || v < best)) best = v;
+      }
+      if (best !== null && best < envMin) envMin = best;
+    }
+    // signal: how many decades the envelope drops from 1.0 to its min.
+    // Floor at 1e-5 so a constant-1.0 panel has signal ~0, a panel that
+    // reaches the 1e-4 floor has signal ~4.
+    const signal = -Math.log10(Math.max(envMin, 1e-5));
+    scoredPanels.push({ task, runs, signal });
+  }
+  // Sort: highest signal first; ties broken by run count.
+  scoredPanels.sort(
+    (a, b) =>
+      b.signal - a.signal || b.runs.length - a.runs.length,
+  );
+  const panels: Array<[string, Trajectory[]]> = scoredPanels.map((p) => [
+    p.task,
+    p.runs,
+  ]);
   if (!panels.length) {
     return (
       <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-5">
