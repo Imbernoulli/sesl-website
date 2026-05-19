@@ -1,5 +1,5 @@
 import type { XTCurve } from "@/lib/types";
-import { linePath, linearScale, logScale } from "@/lib/svg";
+import { linePath, logScale } from "@/lib/svg";
 
 function findCurve(
   curves: XTCurve[],
@@ -9,46 +9,50 @@ function findCurve(
   return curves.find((c) => c.model === model && c.F === F && c.H === "H3");
 }
 
-// Smallest K at which mean_norm crosses a target. Returns null if never.
-function firstKAt(curve: XTCurve | undefined, target: number): number | null {
+function regretAt(curve: XTCurve | undefined, K: number): number | null {
+  if (!curve) return null;
+  const i = curve.Ks.indexOf(K);
+  if (i < 0) return null;
+  return 1 - curve.mean_norm[i];
+}
+
+// Smallest K at which `curve.regret(K) <= targetRegret`. Used to compare
+// sample efficiency between models: 35B and 4B reach a given regret at
+// different K, and the K-ratio = sample-efficiency advantage.
+function firstKAtRegret(
+  curve: XTCurve | undefined,
+  targetRegret: number,
+): number | null {
   if (!curve) return null;
   for (let i = 0; i < curve.Ks.length; i++) {
-    if (curve.mean_norm[i] >= target) return curve.Ks[i];
+    const r = 1 - curve.mean_norm[i];
+    if (r <= targetRegret) return curve.Ks[i];
   }
   return null;
 }
 
-function pctAt(curve: XTCurve | undefined, K: number): number | null {
-  if (!curve) return null;
-  const i = curve.Ks.indexOf(K);
-  if (i < 0) return null;
-  return curve.mean_norm[i];
-}
-
-function Sparkline({
+function SparkRegret({
   curve,
   color,
-  width = 80,
-  height = 28,
+  width = 90,
+  height = 32,
 }: {
   curve: XTCurve;
   color: string;
   width?: number;
   height?: number;
 }) {
-  const sx = logScale(
-    [curve.Ks[0], curve.Ks[curve.Ks.length - 1]],
-    [2, width - 2],
-  );
-  const sy = linearScale([0, 1], [height - 2, 2]);
-  const pts = curve.Ks.map(
-    (k, i) => [sx(k), sy(curve.mean_norm[i])] as [number, number],
-  );
+  // log-x K, log-y regret. Floors at 1e-3 so saturated runs don't disappear.
+  const ks = curve.Ks;
+  const rs = curve.mean_norm.map((m) => Math.max(1 - m, 1e-3));
+  const sx = logScale([ks[0], ks[ks.length - 1] || 1], [3, width - 3]);
+  const sy = logScale([1, 1e-3], [3, height - 3]);
+  const pts = ks.map((k, i) => [sx(k), sy(rs[i])] as [number, number]);
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-20 h-7">
-      <path d={linePath(pts)} stroke={color} strokeWidth={1.4} fill="none" />
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-24 h-8">
+      <path d={linePath(pts)} stroke={color} strokeWidth={1.6} fill="none" />
       {pts.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r={1.4} fill={color} />
+        <circle key={i} cx={x} cy={y} r={1.5} fill={color} />
       ))}
     </svg>
   );
@@ -60,113 +64,138 @@ export function HeadlineKPIs({ curves }: { curves: XTCurve[] }) {
   const c4F0 = findCurve(curves, "Qwen3.5-4B", "F0");
   const c4F2 = findCurve(curves, "Qwen3.5-4B", "F2");
 
-  // Tile A: smallest K where 35B-F0 crosses 99% of its asymptote.
-  const kCrossF0 = firstKAt(c35F0, 0.99);
-  const kCrossF2 = firstKAt(c35F2, 0.99);
-
-  // Tile B: F2 minus F0 on 4B. Prefer the largest positive gap (the
-  // "rich-feedback helps" story). Fall back to the largest-magnitude gap
-  // if there are no positive points yet (early-K noise on 4B-F2).
-  let bestK = 1;
-  let bestGap = 0;
-  let sawPositive = false;
-  if (c4F0 && c4F2) {
-    for (const k of c4F2.Ks) {
-      const i2 = c4F2.Ks.indexOf(k);
-      const i0 = c4F0.Ks.indexOf(k);
-      if (i2 < 0 || i0 < 0) continue;
-      const gap = c4F2.mean_norm[i2] - c4F0.mean_norm[i0];
-      if (gap > 0) {
-        if (!sawPositive || gap > bestGap) {
-          bestGap = gap;
-          bestK = k;
-          sawPositive = true;
-        }
-      } else if (!sawPositive && Math.abs(gap) > Math.abs(bestGap)) {
-        bestGap = gap;
-        bestK = k;
-      }
+  // ===========================================================
+  // Tile A — Sample-efficiency: 35B vs 4B at matched regret.
+  //
+  // Find the regret reached by 4B-F0 at its largest available K, then
+  // find the smallest K at which 35B-F0 already crosses that regret.
+  // The ratio K_4B / K_35B = sample-efficiency advantage of 35B.
+  // ===========================================================
+  let efficiencyRatio: number | null = null;
+  let k4ref: number | null = null;
+  let k35ref: number | null = null;
+  if (c4F0 && c4F0.Ks.length && c35F0) {
+    k4ref = c4F0.Ks[c4F0.Ks.length - 1];
+    const r4 = 1 - c4F0.mean_norm[c4F0.mean_norm.length - 1];
+    k35ref = firstKAtRegret(c35F0, r4);
+    if (k35ref && k35ref > 0) {
+      efficiencyRatio = k4ref / k35ref;
     }
   }
 
-  // Tile C: 35B F0 power-law exponent.
-  const alpha35 = c35F0?.fit?.alpha ?? null;
-  const r2_35 = c35F0?.fit?.r2 ?? null;
+  // ===========================================================
+  // Tile B — Feedback "head-start" on 35B at K=1.
+  //
+  // 35B + F2 starts at much lower regret than F0 at K=1; this gap
+  // shrinks with K. Computed as r(F0, K=1) / r(F2, K=1).
+  // ===========================================================
+  const r35F0_K1 = regretAt(c35F0, 1);
+  const r35F2_K1 = regretAt(c35F2, 1);
+  const headstartRatio =
+    r35F0_K1 !== null && r35F2_K1 !== null && r35F2_K1 > 0
+      ? r35F0_K1 / r35F2_K1
+      : null;
+
+  // ===========================================================
+  // Tile C — F2 hurts 4B. Compute average regret ratio F2/F0
+  // across shared Ks. >1 means F2 is worse.
+  // ===========================================================
+  let f2vsF0_4B_ratio: number | null = null;
+  let n_shared = 0;
+  if (c4F0 && c4F2) {
+    const sharedKs = c4F0.Ks.filter((k) => c4F2.Ks.includes(k));
+    if (sharedKs.length) {
+      const ratios: number[] = [];
+      for (const k of sharedKs) {
+        const r0 = regretAt(c4F0, k);
+        const r2 = regretAt(c4F2, k);
+        if (r0 !== null && r2 !== null && r0 > 1e-4 && r2 > 1e-4) {
+          ratios.push(r2 / r0);
+        }
+      }
+      n_shared = ratios.length;
+      if (ratios.length)
+        f2vsF0_4B_ratio = ratios.reduce((a, b) => a + b, 0) / ratios.length;
+    }
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* Tile A */}
+      {/* Tile A — sample efficiency */}
       <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-5 flex flex-col gap-2">
         <div className="text-xs uppercase tracking-wider text-zinc-500">
-          35B saturates K-axis
+          35B vs 4B · sample efficiency
         </div>
         <div className="flex items-end gap-3 mt-1">
           <div className="text-5xl font-light tabular-nums text-indigo-700">
-            K={kCrossF0 ?? "—"}
+            {efficiencyRatio ? `${efficiencyRatio.toFixed(0)}×` : "—"}
           </div>
           {c35F0 ? (
             <div className="pb-1">
-              <Sparkline curve={c35F0} color="#4f46e5" />
+              <SparkRegret curve={c35F0} color="#4f46e5" />
             </div>
           ) : null}
         </div>
         <div className="text-xs text-zinc-600 tabular-nums">
-          {c35F0
-            ? `mean_norm @ K=${kCrossF0 ?? "?"} reaches ${(pctAt(c35F0, kCrossF0 ?? 0) ?? 0).toFixed(3)}`
-            : "no curve"}
+          35B at K={k35ref ?? "—"} matches 4B at K={k4ref ?? "—"}
         </div>
         <div className="text-xs text-zinc-500">
-          F0 needs only K={kCrossF0 ?? "—"}, F2 reaches 99% by K={kCrossF2 ?? "—"}.
+          Bigger reasoning model converts each trial into far more regret
+          reduction.
         </div>
       </div>
 
-      {/* Tile B */}
+      {/* Tile B — F2 head-start on 35B */}
       <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-5 flex flex-col gap-2">
         <div className="text-xs uppercase tracking-wider text-zinc-500">
-          4B · F2 minus F0
+          35B · F2 head-start at K=1
+        </div>
+        <div className="flex items-end gap-3 mt-1">
+          <div className="text-5xl font-light tabular-nums text-indigo-700">
+            {headstartRatio ? `${headstartRatio.toFixed(1)}×` : "—"}
+          </div>
+          <div className="pb-2 text-xs text-zinc-500 tabular-nums">
+            lower regret
+          </div>
+        </div>
+        <div className="text-xs text-zinc-600 tabular-nums">
+          regret(F0)={r35F0_K1?.toFixed(3) ?? "—"} · regret(F2)=
+          {r35F2_K1?.toFixed(3) ?? "—"}
+        </div>
+        <div className="text-xs text-zinc-500">
+          Rich feedback gives the large model a head-start; gap closes by
+          K=8 as search makes up the deficit.
+        </div>
+      </div>
+
+      {/* Tile C — F2 hurts 4B */}
+      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-5 flex flex-col gap-2">
+        <div className="text-xs uppercase tracking-wider text-zinc-500">
+          4B · F2 vs F0 (worse if &gt; 1)
         </div>
         <div className="flex items-end gap-3 mt-1">
           <div
             className={`text-5xl font-light tabular-nums ${
-              bestGap >= 0 ? "text-rose-700" : "text-zinc-700"
+              f2vsF0_4B_ratio && f2vsF0_4B_ratio > 1.05
+                ? "text-rose-700"
+                : "text-zinc-700"
             }`}
           >
-            {bestGap >= 0 ? "+" : ""}
-            {bestGap.toFixed(2)}
+            {f2vsF0_4B_ratio ? `${f2vsF0_4B_ratio.toFixed(2)}×` : "—"}
           </div>
-          <div className="pb-2 text-xs text-zinc-500 tabular-nums">
-            at K={bestK}
-          </div>
+          {c4F0 ? (
+            <div className="pb-1">
+              <SparkRegret curve={c4F0} color="#e11d48" />
+            </div>
+          ) : null}
         </div>
-        <div className="text-xs text-zinc-600">
-          {bestGap >= 0
-            ? "Rich feedback closes the gap on the small model."
-            : "Small model — rich feedback still noisy at low K."}
-        </div>
-        <div className="text-xs text-zinc-500 tabular-nums">
-          4B-F0 ≈ {pctAt(c4F0, bestK)?.toFixed(2) ?? "—"} · 4B-F2 ≈{" "}
-          {pctAt(c4F2, bestK)?.toFixed(2) ?? "—"}
-        </div>
-      </div>
-
-      {/* Tile C */}
-      <div className="bg-white border border-zinc-200 rounded-2xl shadow-sm p-5 flex flex-col gap-2">
-        <div className="text-xs uppercase tracking-wider text-zinc-500">
-          Cross-task α · 35B-F0
-        </div>
-        <div className="flex items-end gap-3 mt-1">
-          <div className="text-5xl font-light tabular-nums text-indigo-700">
-            {alpha35 !== null ? alpha35.toFixed(2) : "—"}
-          </div>
-          <div className="pb-2 text-xs text-zinc-500 tabular-nums">
-            r² = {r2_35 !== null ? r2_35.toFixed(2) : "—"}
-          </div>
-        </div>
-        <div className="text-xs text-zinc-600">
-          Power-law exponent of R(K) = R<sub>∞</sub> − A·K<sup>−α</sup>.
+        <div className="text-xs text-zinc-600 tabular-nums">
+          mean regret ratio over {n_shared} shared K · &gt; 1 means F2 is
+          worse
         </div>
         <div className="text-xs text-zinc-500">
-          α ≈ 1.0 ≡ each doubling of K halves remaining regret.
+          Counter-intuitive: small model is hurt by verbose F2 feedback —
+          attention dilution / output-budget squeeze.
         </div>
       </div>
     </div>
