@@ -195,23 +195,42 @@ function TaskPanel({ task, runs }: { task: string; runs: Trajectory[] }) {
           stroke="#e4e4e7"
         />
 
-        {/* trajectories */}
+        {/* trajectories with last-improvement marker per run */}
         {runs.map((r, i) => {
           const c = colorFor(r.model, r.F);
           const pts: Array<[number, number]> = [];
           for (let j = 0; j < r.Ks.length; j++) {
             pts.push([sx(r.Ks[j]), sy(clamp(r.regret[j], yLo, yHi))]);
           }
+          // last index where rel_loss strictly decreased = last real
+          // improvement. Hollow circle marker shows "stopped improving
+          // here". User feedback 2026-05-19: makes flat tail readable.
+          let lastImp = 0;
+          for (let j = 1; j < r.regret.length; j++) {
+            if (r.regret[j] < r.regret[j - 1] - 1e-9) lastImp = j;
+          }
           return (
-            <path
-              key={`tr-${i}`}
-              d={linePath(pts)}
-              stroke={c.stroke}
-              strokeOpacity={0.45}
-              strokeWidth={1.1}
-              fill="none"
-              strokeDasharray={c.dashed ? "3 2" : undefined}
-            />
+            <g key={`tr-${i}`}>
+              <path
+                d={linePath(pts)}
+                stroke={c.stroke}
+                strokeOpacity={0.45}
+                strokeWidth={1.1}
+                fill="none"
+                strokeDasharray={c.dashed ? "3 2" : undefined}
+              />
+              {pts[lastImp] ? (
+                <circle
+                  cx={pts[lastImp][0]}
+                  cy={pts[lastImp][1]}
+                  r={2.4}
+                  fill="white"
+                  stroke={c.stroke}
+                  strokeWidth={1.0}
+                  strokeOpacity={0.7}
+                />
+              ) : null}
+            </g>
           );
         })}
 
