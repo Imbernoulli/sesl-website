@@ -6,12 +6,12 @@ const H = 520;
 const PAD = { l: 70, r: 180, t: 36, b: 60 };
 
 // Y-axis is REL_LOSS = (hi_task − best_at_K) / (hi_task − best_at_K1).
-// Each run starts at 1.0 at K=K_first_valid and decays. Codex review
-// 2026-05-19: the (hi − lo) scale cancels in the ratio so only the
-// theoretical optimum hi_task matters (which is well-defined per task).
-// Floor 1e-4 so converged tails stay visible; ceil 1.5 (slack above 1
-// in case of mild noise at K=1).
-const REGRET_FLOOR = 1e-4;
+// Floor 1e-6 matches the clamp in metrics.per_run_trajectories — anything
+// smaller is "converged to the theoretical optimum within numerical
+// precision". Previously the floor was 1e-4 which made all sub-1e-3
+// points pile on top of each other at the bottom (user feedback
+// 2026-05-19). Ceil 1.5 (slack above 1 for noise at K=1).
+const REGRET_FLOOR = 1e-6;
 const REGRET_CEIL = 1.5;
 
 function clamp(v: number, lo: number, hi: number) {
@@ -91,7 +91,7 @@ export function TrajectoryChart({
   const sy = logScale([REGRET_CEIL, REGRET_FLOOR], [PAD.t, H - PAD.b]);
 
   const xTicks = pow2Ticks(kMin, kMax);
-  const yTicks = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001];
+  const yTicks = [1, 0.1, 0.01, 0.001, 1e-4, 1e-5, 1e-6];
 
   // Group runs by (model, F) for the legend.
   const byClass = new Map<

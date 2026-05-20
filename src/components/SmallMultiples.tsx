@@ -7,7 +7,7 @@ import { linePath, logScale, pow2Ticks } from "@/lib/svg";
 // MIN rel_loss across runs ON THIS TASK ONLY — no cross-task interference
 // (the Rastrigin-hits-0 problem that flattened the aggregate envelope).
 
-const REGRET_FLOOR = 1e-4;
+const REGRET_FLOOR = 1e-6;
 const REGRET_CEIL = 1.5;
 
 const PW = 280; // panel width
@@ -53,7 +53,7 @@ function TaskPanel({ task, runs }: { task: string; runs: Trajectory[] }) {
   const xTicks = pow2Ticks(kMin, kMax).filter((_, i, a) =>
     a.length <= 6 ? true : i % Math.ceil(a.length / 6) === 0,
   );
-  const yTicks = [1, 0.1, 0.01, 0.001];
+  const yTicks = [1, 0.01, 1e-4, 1e-6];
 
   // Per-task envelope = min rel_loss across all runs in this panel at each K
   const kSet = new Set<number>();
