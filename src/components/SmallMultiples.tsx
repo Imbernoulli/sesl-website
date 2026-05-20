@@ -7,8 +7,13 @@ import { linePath, logScale, pow2Ticks } from "@/lib/svg";
 // MIN rel_loss across runs ON THIS TASK ONLY — no cross-task interference
 // (the Rastrigin-hits-0 problem that flattened the aggregate envelope).
 
-const REGRET_FLOOR = 1e-6;
-const REGRET_CEIL = 1.5;
+// Per-panel y-axis is computed adaptively from each task's data so a
+// task that lives in [0.1, 1.0] uses the full panel height instead of
+// piling up in the top decade. Cap absolute floor at 1e-6 to match
+// metrics.py clamp; cap ceiling at 1.5. User feedback 2026-05-19:
+// "应该是每个图自适应".
+const REGRET_HARD_FLOOR = 1e-6;
+const REGRET_HARD_CEIL = 1.5;
 
 const PW = 280; // panel width
 const PH = 200; // panel height
@@ -33,27 +38,58 @@ function clamp(v: number, lo: number, hi: number) {
 }
 
 function TaskPanel({ task, runs }: { task: string; runs: Trajectory[] }) {
-  // K-range for this panel only
+  // K-range and rel_loss-range for THIS panel
   let kMin = Infinity;
   let kMax = -Infinity;
+  let rMin = Infinity;
+  let rMax = -Infinity;
   for (const r of runs) {
     if (!r.Ks.length) continue;
     kMin = Math.min(kMin, r.Ks[0]);
     kMax = Math.max(kMax, r.Ks[r.Ks.length - 1]);
+    for (const v of r.regret) {
+      if (v > REGRET_HARD_FLOOR / 10 && v < REGRET_HARD_CEIL * 10) {
+        rMin = Math.min(rMin, v);
+        rMax = Math.max(rMax, v);
+      }
+    }
   }
   if (!isFinite(kMin)) {
     kMin = 1;
     kMax = 16;
   }
+  if (!isFinite(rMin)) {
+    rMin = REGRET_HARD_FLOOR;
+    rMax = REGRET_HARD_CEIL;
+  }
   kMin = Math.min(kMin, 1);
+  // Per-panel adaptive y-bounds: round down to nearest power of 10 for
+  // floor, round up for ceiling, clamp to [HARD_FLOOR, HARD_CEIL].
+  const pad = 1.05;
+  const yLo = Math.max(
+    REGRET_HARD_FLOOR,
+    Math.pow(10, Math.floor(Math.log10(rMin))),
+  );
+  const yHi = Math.min(
+    REGRET_HARD_CEIL,
+    Math.max(1, Math.pow(10, Math.ceil(Math.log10(rMax * pad)))),
+  );
 
   const sx = logScale([kMin, kMax], [PAD.l, PW - PAD.r]);
-  const sy = logScale([REGRET_CEIL, REGRET_FLOOR], [PAD.t, PH - PAD.b]);
+  const sy = logScale([yHi, yLo], [PAD.t, PH - PAD.b]);
 
   const xTicks = pow2Ticks(kMin, kMax).filter((_, i, a) =>
     a.length <= 6 ? true : i % Math.ceil(a.length / 6) === 0,
   );
-  const yTicks = [1, 0.01, 1e-4, 1e-6];
+  // Y-ticks: powers of 10 within [yLo, yHi], cap to ~5 entries for legibility.
+  const lo10 = Math.log10(yLo);
+  const hi10 = Math.log10(yHi);
+  const yTicks: number[] = [];
+  for (let i = Math.ceil(hi10); i >= Math.floor(lo10); i--) {
+    const v = Math.pow(10, i);
+    if (v <= yHi * 1.01 && v >= yLo * 0.99) yTicks.push(v);
+    if (yTicks.length >= 6) break;
+  }
 
   // Per-task envelope = min rel_loss across all runs in this panel at each K
   const kSet = new Set<number>();
@@ -71,7 +107,7 @@ function TaskPanel({ task, runs }: { task: string; runs: Trajectory[] }) {
       if (v !== null && (best === null || v < best)) best = v;
     }
     if (best !== null) {
-      envPts.push([sx(k), sy(clamp(best, REGRET_FLOOR, REGRET_CEIL))]);
+      envPts.push([sx(k), sy(clamp(best, yLo, yHi))]);
     }
   }
 
@@ -89,7 +125,9 @@ function TaskPanel({ task, runs }: { task: string; runs: Trajectory[] }) {
           {task}
         </span>
         <span className="text-[10px] text-zinc-400 tabular-nums">
-          n={runs.length}
+          n={runs.length} · y∈[
+          {yLo < 1e-3 ? yLo.toExponential(0) : yLo.toString()},
+          {yHi.toString()}]
         </span>
       </div>
       <svg
@@ -116,7 +154,7 @@ function TaskPanel({ task, runs }: { task: string; runs: Trajectory[] }) {
               fill="#a1a1aa"
               className="tabular-nums"
             >
-              {y < 0.01 ? y.toExponential(0) : y.toString()}
+              {y < 1e-3 ? `1e${Math.round(Math.log10(y))}` : y.toString()}
             </text>
           </g>
         ))}
@@ -162,7 +200,7 @@ function TaskPanel({ task, runs }: { task: string; runs: Trajectory[] }) {
           const c = colorFor(r.model, r.F);
           const pts: Array<[number, number]> = [];
           for (let j = 0; j < r.Ks.length; j++) {
-            pts.push([sx(r.Ks[j]), sy(clamp(r.regret[j], REGRET_FLOOR, REGRET_CEIL))]);
+            pts.push([sx(r.Ks[j]), sy(clamp(r.regret[j], yLo, yHi))]);
           }
           return (
             <path
