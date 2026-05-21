@@ -129,36 +129,29 @@ export function FindingsView({
 
       <Figure
         src={`${FIG_DIR}/fig1.svg`}
-        alt="Figure 1 — N_opt(C) compute-optimal proposer size"
+        alt="Figure 1 — K-axis scaling law per (model, feedback)"
         title={copy.fig1Title}
         caption={copy.fig1Caption}
         reading={copy.fig1Reading}
       />
       <Figure
         src={`${FIG_DIR}/fig2.svg`}
-        alt="Figure 2 — Approach 1 training-curve envelope"
+        alt="Figure 2 — per-run trajectories with compute-optimal envelope"
         title={copy.fig2Title}
         caption={copy.fig2Caption}
         reading={copy.fig2Reading}
       />
       <Figure
         src={`${FIG_DIR}/fig3.svg`}
-        alt="Figure 3 — Approach 2 IsoFLOP profiles"
+        alt="Figure 3 — IsoFLOP comparison across proposers"
         title={copy.fig3Title}
         caption={copy.fig3Caption}
         reading={copy.fig3Reading}
       />
       <Figure
         src={`${FIG_DIR}/fig4.svg`}
-        alt="Figure 4a — Approach 3 parametric L(N, K) in (C, N) plane, F=F0"
-        title={`${copy.fig4Title}  ·  F0`}
-        caption={copy.fig4Caption}
-        reading={copy.fig4Reading}
-      />
-      <Figure
-        src={`${FIG_DIR}/fig4_F2.svg`}
-        alt="Figure 4b — Approach 3 parametric L(N, K) in (C, N) plane, F=F2"
-        title={`${copy.fig4Title}  ·  F2`}
+        alt="Figure 4 — Approach 3 parametric fit validation"
+        title={copy.fig4Title}
         caption={copy.fig4Caption}
         reading={copy.fig4Reading}
       />
@@ -167,13 +160,6 @@ export function FindingsView({
         alt="Appendix A — cross-task α distribution"
         title={copy.appATitle}
         caption={copy.appACaption}
-        reading=""
-      />
-      <Figure
-        src={`${FIG_DIR}/appB_predicted_vs_observed.svg`}
-        alt="Appendix B — predicted vs observed regret"
-        title="Appendix B · Predicted vs observed"
-        caption="Validation scatter for the Approach-3 parametric fit; black dashed = 1:1 line; colour = proposer."
         reading=""
       />
 

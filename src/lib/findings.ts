@@ -95,61 +95,64 @@ const en: Copy = {
       note: "Scale-invariant; lower is better; floor at machine precision" },
   ],
 
-  fig1Title: "Figure 1 · Compute-optimal N_opt(C) and K_opt(C)",
+  fig1Title: "Figure 1 · Headline K-axis scaling law",
   fig1Caption:
-    "Power-law fit of optimal proposer size and optimal trial count against inference compute. " +
-    "Mirrors Chinchilla Fig 1: the two panels report N_opt(C) and (here) K_opt(C) instead of D_opt(C).",
+    "Per (proposer, feedback) class we pool K-axis prefixes from every run and plot the " +
+    "geometric-mean relative regret across tasks at each K. Each line is fitted as " +
+    "R(K) = c · K^{−α_K}. K is the only axis where we have dense log-spaced data, so this is " +
+    "the most reliable figure on the page.",
   fig1Reading:
-    "K_opt scales steeply with compute (α_K close to 0.75 here); N_opt is nearly flat. " +
-    "In Chinchilla's training-time setting model and tokens scale at α ≈ 0.5 each (joint Approach-3); " +
-    "in our inference-time setting almost all marginal compute should be spent on more trials, " +
-    "not on a bigger proposer.",
-  fig1AxN: "N_opt (active parameters, B)",
-  fig1AxK: "K_opt (trials)",
-  fig1AxC: "Inference FLOPs C ≈ N·K·T·W",
+    "α_K values cluster between 0.10 and 0.40 across (model, F). The 4B proposer with F0 feedback " +
+    "is steepest (α_K = 0.40, R² = 0.95). 35B-A3B is shallower because it saturates by K ≈ 16 — " +
+    "heuristic-lock, not theoretical convergence.",
+  fig1AxN: "",
+  fig1AxK: "",
+  fig1AxC: "",
 
-  fig2Title: "Figure 2 · Approach 1 — Training-curve envelope",
+  fig2Title: "Figure 2 · Compute envelope across proposers",
   fig2Caption:
-    "Each thin line is one SESL run plotted as (cumulative compute, relative regret); colour encodes proposer " +
-    "active size (yellow → small, dark blue → large). The lower envelope of all curves (highlighted) is the " +
-    "compute-optimal frontier. Direct analogue of Chinchilla Fig 2 left.",
+    "Each thin line is one SESL run plotted as (inference FLOPs C, relative regret R). Lines are " +
+    "categorically coloured by proposer (no continuous N gradient — there are only three discrete " +
+    "proposer sizes, two dense and one MoE). The bold line is the lower envelope: the compute-optimal " +
+    "frontier achievable on these tasks.",
   fig2Reading:
-    "The envelope is power-law in inference compute. Different model sizes dominate the frontier in different " +
-    "compute regimes — exactly the cross-over behaviour Chinchilla observed for varying training budgets.",
+    "The frontier descends as a power law in inference compute over ~3 decades, then flattens around " +
+    "10⁹ FLOPs where heuristic-lock and all-invalid cliffs dominate. The envelope is set mostly by " +
+    "35B-A3B at low compute and by 4B at high compute.",
   fig2AxC: "Inference FLOPs C (log)",
   fig2AxLoss: "Relative regret R (log, lower is better)",
 
-  fig3Title: "Figure 3 · Approach 2 — IsoCompute U-shapes",
+  fig3Title: "Figure 3 · IsoFLOP comparison across proposers",
   fig3Caption:
-    "For each fixed compute bin we plot relative regret against proposer size. Mirrors Chinchilla Fig 3 left. " +
-    "Each connected line is one IsoFLOP profile; the marker at the bottom shows N_opt(C).",
+    "For each ~0.4-decade compute bin we plot geometric-mean relative regret as a function of " +
+    "PROPOSER (a categorical x-axis, not a smooth N axis: we only have three proposers — and one " +
+    "is an MoE). X labels show both N_active and N_total so the dense/MoE distinction is explicit. " +
+    "Colour encodes inference-FLOP budget.",
   fig3Reading:
-    "With only three proposer sizes the U-shapes are coarse and N_opt jumps discretely across bins. " +
-    "Still, the qualitative IsoFLOP behaviour holds: at small C, the small proposer is dominant; at large C, " +
-    "either the small or the large proposer wins depending on heuristic-lock onset.",
-  fig3AxN: "Proposer active parameters N (log, B)",
-  fig3AxLoss: "Geometric-mean relative regret R (log)",
+    "Two observations stick: (1) the 27B dense model is dominated at every compute level — neither " +
+    "cheaper than 4B nor better than 35B-A3B; (2) the winner flips with C — at low compute 35B-A3B " +
+    "wins, at high compute 4B catches up because its diversity escapes the 35B-A3B heuristic-lock.",
+  fig3AxN: "",
+  fig3AxLoss: "",
 
-  fig4Title: "Figure 4 · Approach 3 — Parametric L(N, K)",
+  fig4Title: "Figure 4 · Joint L(N, K) fit — predicted vs observed",
   fig4Caption:
-    "Per-task parametric fit L(N, K) = E + A·N^{−α_N} + B·K^{−α_K}; cells show the median exponents across " +
-    "tasks for each feedback level. Iso-loss curves are overlaid on the (N, K) plane. Mirrors Chinchilla Fig 4.",
+    "Predicted vs observed mean regret for the per-task joint fit L(N, K) = E + A·N^{−α_N} + B·K^{−α_K}. " +
+    "Black dashed = 1:1 line. The previous version of this page tried to draw the same fit as a 2D " +
+    "contour on (C, N); we dropped that because with only 3 N values the contour was extrapolation, " +
+    "not data.",
   fig4Reading:
-    "Median exponents are reported in the chart headers. The contours bow toward the (small-N, large-K) " +
-    "corner: for a fixed regret budget, more trials buy more reduction than a bigger proposer.",
-  fig4AxN: "N (B, log)",
-  fig4AxK: "K (log)",
+    "Log-R² ≈ 0.7. The fit systematically over-estimates the low-regret cells (e.g. 4B runs that hit " +
+    "the rastrigin theoretical optimum) — a 3-parameter form can't capture heuristic-lock or the " +
+    "convergence cliff. Treat the joint exponents as descriptive, not predictive.",
+  fig4AxN: "",
+  fig4AxK: "",
 
-  fig5Title: "Figure 5 · Predicted-vs-observed regret",
-  fig5Caption:
-    "Scatter of predicted (Approach-3 fit) vs observed mean regret across all (task, model, F, K) cells. " +
-    "Black 1:1 line. Mirrors Chinchilla's validation scatter.",
-  fig5Reading:
-    "Linear R² and log-space R² are reported above. Off-diagonal mass — when the predictor under-estimates " +
-    "low-regret cells — is the parametric form's residual: a 3-parameter fit cannot capture heuristic-lock " +
-    "or invalid-output cliffs.",
-  fig5AxObs: "Observed mean regret",
-  fig5AxPred: "Predicted regret (Approach 3)",
+  fig5Title: "",
+  fig5Caption: "",
+  fig5Reading: "",
+  fig5AxObs: "",
+  fig5AxPred: "",
 
   appATitle: "Appendix · Cross-task α distribution",
   appACaption:
@@ -205,55 +208,53 @@ const zh: Copy = {
       note: "标度无关；越小越好；地板取机器精度" },
   ],
 
-  fig1Title: "Figure 1 · 计算最优 N_opt(C) 与 K_opt(C)",
+  fig1Title: "Figure 1 · 主线：K 轴幂律",
   fig1Caption:
-    "推理算力下最优 proposer 大小、最优 trial 数的幂律拟合。镜像 Chinchilla Fig 1：两个面板分别是 " +
-    "N_opt(C) 和（此处）K_opt(C)，原文是 D_opt(C)。",
+    "按 (proposer, feedback) 分类，把每条 run 的 K 轴前缀合并，对各 K 求跨任务几何平均相对 regret。" +
+    "每条线按 R(K) = c · K^{−α_K} 拟合。K 是唯一拥有密集 log 等距数据的轴，所以这张图最可信。",
   fig1Reading:
-    "K_opt 随算力陡增（这里 α_K ≈ 0.75），N_opt 接近平坦。" +
-    "Chinchilla 的训练场景里 N 和 D 都按 α ≈ 0.5 同时 scale（联合 Approach 3 结果）；" +
-    "在我们的推理时场景下，几乎所有边际算力都应该用来加 trial，而不是换更大的 proposer。",
-  fig1AxN: "N_opt (active 参数, B)",
-  fig1AxK: "K_opt (trial 数)",
-  fig1AxC: "推理 FLOPs C ≈ N·K·T·W",
+    "α_K 在 (模型, F) 之间介于 0.10 到 0.40。4B + F0 最陡（α_K = 0.40，R² = 0.95）；" +
+    "35B-A3B 比较平因为 K ≈ 16 就进入启发式锁——不是真的收敛到最优。",
+  fig1AxN: "",
+  fig1AxK: "",
+  fig1AxC: "",
 
-  fig2Title: "Figure 2 · Approach 1 —— 训练曲线 envelope",
+  fig2Title: "Figure 2 · 跨 proposer 的算力 envelope",
   fig2Caption:
-    "每条细线是一条 SESL run，绘制成（累计算力, 相对 regret）；颜色编码 proposer active 大小（黄 → 小，深蓝 → 大）。" +
-    "下包络（高亮）就是 compute-optimal frontier。直接对应 Chinchilla Fig 2 左。",
+    "每条细线一个 run，绘制成（推理 FLOPs C, 相对 regret R）。线按 proposer 分类着色——" +
+    "没有连续的 N 渐变，因为我们只有三个离散 proposer，其中两个 dense 一个 MoE。" +
+    "粗黑线是下包络，即 compute-optimal frontier。",
   fig2Reading:
-    "下包络在推理算力上呈幂律。不同算力区间，不同模型主导前沿——正是 Chinchilla 在变 budget 下观察到的 cross-over。",
+    "下包络在大约 3 个数量级内呈幂律下降，到 10⁹ FLOPs 附近变平——这是启发式锁与 all-invalid cliff 主导的区域。" +
+    "包络在低算力区主要由 35B-A3B 撑起，高算力区主要由 4B 撑起。",
   fig2AxC: "推理 FLOPs C (log)",
   fig2AxLoss: "相对 regret R (log，越低越好)",
 
-  fig3Title: "Figure 3 · Approach 2 —— IsoCompute U-shape",
+  fig3Title: "Figure 3 · 跨 proposer 的 IsoFLOP 比较",
   fig3Caption:
-    "在每个固定算力区间内，把相对 regret 对 proposer 大小作图。镜像 Chinchilla Fig 3 左。" +
-    "每条连线是一条 IsoFLOP profile；下方标记是 N_opt(C)。",
+    "每个约 0.4-decade 算力区间内，几何平均相对 regret 按 PROPOSER 排——不是连续 N 轴，" +
+    "因为我们只有 3 个 proposer，其中一个是 MoE。X 轴标签同时给出 N_active 与 N_total，让 dense/MoE 区别看得清。" +
+    "颜色编码推理 FLOPs 区间。",
   fig3Reading:
-    "由于只有三个 proposer 大小，U-shape 比较粗，N_opt 在区间之间是离散跳跃的。" +
-    "但定性 IsoFLOP 行为成立：小算力时小 proposer 占优，大算力时根据是否进入启发式锁，可能是小或大模型胜出。",
-  fig3AxN: "Proposer active 参数 N (log, B)",
-  fig3AxLoss: "几何平均相对 regret R (log)",
+    "两点观察：(1) 27B dense 在每个算力级别都被支配——既不比 4B 便宜，也不比 35B-A3B 好；" +
+    "(2) 赢家随 C 翻转：低算力时 35B-A3B 占优，高算力时 4B 反超，因为它的输出分布更松、能跳出 35B-A3B 的启发式锁。",
+  fig3AxN: "",
+  fig3AxLoss: "",
 
-  fig4Title: "Figure 4 · Approach 3 —— 参数化 L(N, K)",
+  fig4Title: "Figure 4 · 联合 L(N, K) 拟合——预测 vs 实测",
   fig4Caption:
-    "对每个任务做参数化拟合 L(N, K) = E + A·N^{−α_N} + B·K^{−α_K}；面板标题里报的是每种反馈下跨任务的指数中位数。" +
-    "(N, K) 平面上叠加等损耗曲线。镜像 Chinchilla Fig 4。",
+    "联合拟合 L(N, K) = E + A·N^{−α_N} + B·K^{−α_K} 的预测值与所有 (task, model, F, K) 单元实测均值的散点。" +
+    "黑色虚线 = 1:1。上一版本把这个拟合画成 (C, N) 平面上的二维等高线，但只有 3 个 N 值，等高线纯属外推——已删除。",
   fig4Reading:
-    "等损耗曲线朝 (小 N, 大 K) 角弯曲：" +
-    "在固定 regret 预算下，多 trial 换来的 reduction 比换大 proposer 更高效。",
-  fig4AxN: "N (B，log)",
-  fig4AxK: "K (log)",
+    "log-R² ≈ 0.7。低 regret 单元（比如 4B 跑到 rastrigin 理论最优）系统性被高估——三参数拟合捕不到启发式锁和收敛 cliff。" +
+    "把联合指数当描述性数字看，不要当预测器用。",
+  fig4AxN: "",
+  fig4AxK: "",
 
-  fig5Title: "Figure 5 · 预测 vs 观测",
-  fig5Caption:
-    "Approach-3 拟合的预测值与所有 (task, model, F, K) 单元的实测均值散点。黑色 1:1 线。" +
-    "镜像 Chinchilla 的验证散点。",
-  fig5Reading:
-    "图上方报线性 R² 和 log-space R²。低 regret 单元被预测器低估时偏离对角线——这是参数化形式的残差：" +
-    "三参数拟合捕不到启发式锁和 invalid-output cliff。",
-  fig5AxObs: "实测平均 regret",
+  fig5Title: "",
+  fig5Caption: "",
+  fig5Reading: "",
+  fig5AxObs: "",
   fig5AxPred: "预测 regret (Approach 3)",
 
   appATitle: "附录 · 跨任务 α 分布",
