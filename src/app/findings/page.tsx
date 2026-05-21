@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
-import { loadState } from "@/lib/loadState";
+import { loadScalingLaws, loadState } from "@/lib/loadState";
 import { FindingsView } from "@/components/FindingsView";
 
 export const metadata: Metadata = {
-  title: "SESL — Initial Findings · 初步结果",
+  title: "SESL — Scaling Laws · Chinchilla mirror",
   description:
-    "Four results that current SESL grid runs already support: power-law scaling, feedback helps weak models more, 35B heuristic-lock, and small-model reversal on simple tasks.",
+    "Five-figure scaling-law analysis on SESL data, mirroring Hoffmann et al. (2022) arXiv:2203.15556: training-curve envelope, IsoCompute U-shapes, parametric L(N,K), predicted-vs-actual.",
 };
 
 export default async function FindingsPage() {
-  const state = await loadState();
+  const [state, sl] = await Promise.all([loadState(), loadScalingLaws()]);
   return (
     <FindingsView
-      curves={state.xt_curves ?? []}
-      headline={state.tasks_headline ?? []}
+      scalingLaws={sl}
       generatedAtIso={state.generated_at_iso}
       gitSha={state.git_sha}
     />

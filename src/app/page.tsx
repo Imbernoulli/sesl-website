@@ -31,7 +31,7 @@ export default async function Home() {
             href="./findings/"
             className="text-[11px] px-2 py-1 rounded-md bg-zinc-900 text-white hover:bg-zinc-700"
           >
-            Findings · 初步结果 →
+            Scaling Laws →
           </Link>
           <div className="flex items-center gap-2 text-[10px] tabular-nums text-zinc-400 font-mono">
             <span>{state.generated_at_iso}</span>

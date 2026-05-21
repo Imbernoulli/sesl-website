@@ -1,234 +1,281 @@
-// Bilingual copy for the /findings results page. Numeric values are
-// derived live from xt_curves in state.json so they stay in sync with
-// new data — the strings here are only the explanatory text.
+// Bilingual copy for the /findings scaling-law page.
+// Mirrors Chinchilla (Hoffmann et al. 2022, arXiv 2203.15556) figure
+// structure 1-1: each section here matches one figure in that paper.
+// Numbers are derived live from scaling_laws.json — only the
+// explanatory strings live in this file.
 
 export type Lang = "en" | "zh";
 
 export interface Copy {
   pageTitle: string;
   pageSubtitle: string;
-  langButtonEN: string;
-  langButtonZH: string;
   asOf: string;
   backToDashboard: string;
-  lead: string;
-  // four findings
-  finding1Title: string;
-  finding1Lead: string;
-  finding1TableTitle: string;
-  finding1Reading: string;
-  finding2Title: string;
-  finding2Lead: string;
-  finding2Reading: string;
-  finding3Title: string;
-  finding3Lead: string;
-  finding3Reading: string;
-  finding4Title: string;
-  finding4Lead: string;
-  finding4TableHead: { task: string; bestModel: string; setting: string; bestValue: string };
-  finding4Reading: string;
-  limitsTitle: string;
-  limits: string[];
-  whatsNextTitle: string;
-  whatsNext: string[];
-  // chart axis labels
-  axisK: string;
-  axisRelLoss: string;
-  axisAlpha: string;
-  tableCols: {
-    model: string;
-    feedback: string;
-    alpha: string;
-    r2: string;
-    kRange: string;
-  };
-  notes: {
-    f2HelpsWeak: string;
-    saturation: string;
-    smallModelWins: string;
-  };
+  langEN: string;
+  langZH: string;
+  setupTitle: string;
+  setupBody: string;
+  axisMapTitle: string;
+  axisMapRows: Array<{ chinchilla: string; sesl: string; note: string }>;
+  // Figure 1 — overview (Chinchilla Fig 1)
+  fig1Title: string;
+  fig1Caption: string;
+  fig1Reading: string;
+  fig1AxN: string;
+  fig1AxC: string;
+  fig1AxK: string;
+  // Figure 2 — Approach 1 (Chinchilla Fig 2)
+  fig2Title: string;
+  fig2Caption: string;
+  fig2Reading: string;
+  fig2AxC: string;
+  fig2AxLoss: string;
+  // Figure 3 — Approach 2 (Chinchilla Fig 3)
+  fig3Title: string;
+  fig3Caption: string;
+  fig3Reading: string;
+  fig3AxN: string;
+  fig3AxLoss: string;
+  // Figure 4 — Approach 3 (Chinchilla Fig 4)
+  fig4Title: string;
+  fig4Caption: string;
+  fig4Reading: string;
+  fig4AxN: string;
+  fig4AxK: string;
+  // Figure 5 — validation
+  fig5Title: string;
+  fig5Caption: string;
+  fig5Reading: string;
+  fig5AxObs: string;
+  fig5AxPred: string;
+  // Appendix A — α distribution
+  appATitle: string;
+  appACaption: string;
+  // Footer caveats
+  caveatsTitle: string;
+  caveats: string[];
+  // Misc strings
+  exponentLabel: string;
+  r2Label: string;
+  nLabel: string;
+  taskColHeader: string;
+  modelColHeader: string;
+  fLabel: string;
+  feedbackLabel: string;
 }
 
 const en: Copy = {
-  pageTitle: "Initial Findings",
+  pageTitle: "Scaling Laws — Chinchilla 2203.15556 mirror",
   pageSubtitle:
-    "Four results that the existing SESL grid runs already support, rolled up from 1,194 grid runs across 3 proposer models and 16+ tasks.",
-  langButtonEN: "EN",
-  langButtonZH: "中",
+    "Five figures mirroring Hoffmann et al. (2022) on existing SESL grid data. " +
+    "The mapping is: model params N → proposer active params, training tokens D → search tokens (K·T·W), " +
+    "training FLOPs C → inference FLOPs (≈ N·K·T·W), training loss L → relative regret R(K) = (hi − best@K) / (hi − best@1).",
+
   asOf: "Snapshot",
   backToDashboard: "← Dashboard",
-  lead:
-    "SESL is a harness that lets an LLM-driven evolutionary search refine code over K trials against a deterministic objective. " +
-    "We measure how well the harness scales as we vary trial count (K), feedback richness (F0 = scalar-only, F2 = scalar + diagnostics), and proposer-model size. " +
-    "The four findings below are stable across our current data and form the spine of the eventual paper.",
+  langEN: "EN",
+  langZH: "中",
 
-  finding1Title: "1 · Test-time scaling follows a power law",
-  finding1Lead:
-    "Across all model × feedback combinations the cross-task normalised score follows " +
-    "R(K) = R_inf + A · K^-α. Six curves fit cleanly (r² ≥ 0.75); the strongest test-time scaling exponent we observe is α = 0.94 (Qwen3.6-35B-A3B with F2 feedback).",
-  finding1TableTitle: "Power-law fits (per model × feedback level)",
-  finding1Reading:
-    "Read α as the 'sample-efficiency exponent': how much each additional doubling of trials buys. " +
-    "Two clean signals here: (a) larger proposer ⇒ larger α (35B ≫ 4B), (b) the 27B fits are weak because the model is already at ceiling at K=1 (mean_norm ≈ 1.00 from the start).",
+  setupTitle: "Setup",
+  setupBody:
+    "We follow Chinchilla's three-approach structure on top of a self-evolve harness in which an LLM proposer " +
+    "generates candidate programs for K trials, each spending up to T thinking tokens at parallel width W. " +
+    "Per-task relative regret is the Codex-suggested metric whose (hi − lo) scale cancels: only the per-task " +
+    "theoretical / observed upper bound is needed. All exponents below are reported on R(K) directly.",
 
-  finding2Title: "2 · Rich feedback helps weak models far more than strong ones",
-  finding2Lead:
-    "F2 (scalar score + diagnostic feedback) raises the test-time scaling exponent α by a much larger margin on the small model than on the large one.",
-  finding2Reading:
-    "If feedback richness were a generic harness improvement, every model would benefit equally. We see the opposite — the 4B gains +51% relative to itself while the 35B gains only +4%. " +
-    "Interpretation: the 35B already has enough prior knowledge to extract the right next-edit from a scalar score, while the 4B needs the diagnostic to know where its candidate went wrong. " +
-    "This is the 'Seeing' axis of the SESL design space.",
-
-  finding3Title: "3 · The 35B saturates at K = 8–16, but is not at the optimum",
-  finding3Lead:
-    "On combinatorial-optimisation tasks the 35B converges to a near-constant best-so-far by K ≈ 16, " +
-    "yet the saturation point is 25-43% below the achievable bound on MaxCut. " +
-    "This is heuristic-lock, not theoretical convergence.",
-  finding3Reading:
-    "Diagnostic confirmed by inspecting individual runs: on maxcut60 the model produces 71 trials with only 1 unique scored value — every trial rediscovers the same greedy heuristic. " +
-    "The implication for scaling-law work: when α appears to saturate against a ceiling, that ceiling is the model's behavioural attractor, not the problem's optimum. Mitigations (temperature, island MAP-Elites) are queued in the dashboard's Phase-4 backlog.",
-
-  finding4Title: "4 · The small model beats the large one on simple problems",
-  finding4Lead:
-    "On all rastrigin sizes (8, 16, 50, 100) the 4B reaches the theoretical optimum (regret = 0); " +
-    "on small combinatorial instances (maxcut60, maxcut100, tsp60) the 4B's best is also above the 35B's best. " +
-    "The 35B only takes the lead on larger circle-packing, large maxcut, and large TSP.",
-  finding4TableHead: {
-    task: "Task",
-    bestModel: "Best model",
-    setting: "K · F",
-    bestValue: "Best score",
-  },
-  finding4Reading:
-    "Consistent with the heuristic-lock finding: on tasks where a non-trivial heuristic doesn't exist (rastrigin, small instances), the 35B locks onto a bad one immediately and never explores out, " +
-    "while the 4B's looser distribution stumbles into the global optimum. " +
-    "The cross-over to 35B advantage happens once instances get large enough that diversified greedy heuristics dominate random exploration.",
-
-  limitsTitle: "Limitations / known issues",
-  limits: [
-    "35B at K=128/256 has many ALLINV runs (every trial produced syntactically-invalid code) — late-K curves are sparser than headline counts suggest. F4 (richest feedback) at K=256 was entirely ALLINV.",
-    "27B coverage is thin (4-6 OK runs per (K,F) bucket); α fits r² ≈ 0.75–0.77 are only sanity-check quality.",
-    "The maxcut-diversity sweep (temperature × n_islands) and harness-axis sweeps were interrupted by an inference-server crash on 2026-05-20 and have not yet resumed.",
-    "All numbers are aggregated from the published state.json bundle; the underlying jsonl runs live in the private sesl-dev repo.",
+  axisMapTitle: "Axis correspondence",
+  axisMapRows: [
+    { chinchilla: "Model parameters N", sesl: "Proposer active parameters N (B)",
+      note: "Qwen3.5-4B → 4.0, Qwen3.6-27B → 27.0, Qwen3.6-35B-A3B → 3.0 (active, MoE)" },
+    { chinchilla: "Training tokens D", sesl: "Search tokens ≈ K · T · W",
+      note: "K trials × T thinking tokens × W parallel width" },
+    { chinchilla: "Training FLOPs C ≈ 6·N·D", sesl: "Inference FLOPs C ≈ N · K · T · W",
+      note: "Inference compute scales linearly in N_active per token" },
+    { chinchilla: "Validation loss L", sesl: "Relative regret R(K) = (hi − best@K) / (hi − best@1)",
+      note: "Scale-invariant; lower is better; floor at machine precision" },
   ],
 
-  whatsNextTitle: "Coming up",
-  whatsNext: [
-    "Harness axis: islands × history_depth × summary_chars × temperature sweep on 4B (best signal vs. cost ratio).",
-    "Maxcut diversity sweep to test whether temperature / island-MAP-Elites can break the 35B heuristic-lock.",
-    "12 upstream open-ended tasks (MLS-Bench + Frontier-Engineering JobShop) — first batches already producing per-trial walls in the 1.5–33 s range.",
+  fig1Title: "Figure 1 · Compute-optimal N_opt(C) and K_opt(C)",
+  fig1Caption:
+    "Power-law fit of optimal proposer size and optimal trial count against inference compute. " +
+    "Mirrors Chinchilla Fig 1: the two panels report N_opt(C) and (here) K_opt(C) instead of D_opt(C).",
+  fig1Reading:
+    "K_opt scales steeply with compute (α_K close to 0.75 here); N_opt is nearly flat. " +
+    "In Chinchilla's training-time setting model and tokens scale at α ≈ 0.5 each (joint Approach-3); " +
+    "in our inference-time setting almost all marginal compute should be spent on more trials, " +
+    "not on a bigger proposer.",
+  fig1AxN: "N_opt (active parameters, B)",
+  fig1AxK: "K_opt (trials)",
+  fig1AxC: "Inference FLOPs C ≈ N·K·T·W",
+
+  fig2Title: "Figure 2 · Approach 1 — Training-curve envelope",
+  fig2Caption:
+    "Each thin line is one SESL run plotted as (cumulative compute, relative regret); colour encodes proposer " +
+    "active size (yellow → small, dark blue → large). The lower envelope of all curves (highlighted) is the " +
+    "compute-optimal frontier. Direct analogue of Chinchilla Fig 2 left.",
+  fig2Reading:
+    "The envelope is power-law in inference compute. Different model sizes dominate the frontier in different " +
+    "compute regimes — exactly the cross-over behaviour Chinchilla observed for varying training budgets.",
+  fig2AxC: "Inference FLOPs C (log)",
+  fig2AxLoss: "Relative regret R (log, lower is better)",
+
+  fig3Title: "Figure 3 · Approach 2 — IsoCompute U-shapes",
+  fig3Caption:
+    "For each fixed compute bin we plot relative regret against proposer size. Mirrors Chinchilla Fig 3 left. " +
+    "Each connected line is one IsoFLOP profile; the marker at the bottom shows N_opt(C).",
+  fig3Reading:
+    "With only three proposer sizes the U-shapes are coarse and N_opt jumps discretely across bins. " +
+    "Still, the qualitative IsoFLOP behaviour holds: at small C, the small proposer is dominant; at large C, " +
+    "either the small or the large proposer wins depending on heuristic-lock onset.",
+  fig3AxN: "Proposer active parameters N (log, B)",
+  fig3AxLoss: "Geometric-mean relative regret R (log)",
+
+  fig4Title: "Figure 4 · Approach 3 — Parametric L(N, K)",
+  fig4Caption:
+    "Per-task parametric fit L(N, K) = E + A·N^{−α_N} + B·K^{−α_K}; cells show the median exponents across " +
+    "tasks for each feedback level. Iso-loss curves are overlaid on the (N, K) plane. Mirrors Chinchilla Fig 4.",
+  fig4Reading:
+    "Median exponents are reported in the chart headers. The contours bow toward the (small-N, large-K) " +
+    "corner: for a fixed regret budget, more trials buy more reduction than a bigger proposer.",
+  fig4AxN: "N (B, log)",
+  fig4AxK: "K (log)",
+
+  fig5Title: "Figure 5 · Predicted-vs-observed regret",
+  fig5Caption:
+    "Scatter of predicted (Approach-3 fit) vs observed mean regret across all (task, model, F, K) cells. " +
+    "Black 1:1 line. Mirrors Chinchilla's validation scatter.",
+  fig5Reading:
+    "Linear R² and log-space R² are reported above. Off-diagonal mass — when the predictor under-estimates " +
+    "low-regret cells — is the parametric form's residual: a 3-parameter fit cannot capture heuristic-lock " +
+    "or invalid-output cliffs.",
+  fig5AxObs: "Observed mean regret",
+  fig5AxPred: "Predicted regret (Approach 3)",
+
+  appATitle: "Appendix · Cross-task α distribution",
+  appACaption:
+    "Distribution of the per-task K-axis exponent α across all tasks, split by proposer × feedback. " +
+    "The wide spread is the analogue of Chinchilla observing distribution-dependent fits at the task level " +
+    "before averaging.",
+
+  caveatsTitle: "Caveats",
+  caveats: [
+    "T (thinking tokens) and W (parallel width) are mostly fixed at T=32768 and W=8; the only truly varied axes here are K and proposer size. T and W are folded into C as a constant factor.",
+    "Only three proposer sizes makes Approach 2's U-shapes coarse. A fourth model size would help.",
+    "Many 35B-A3B runs at K ≥ 128 are all-invalid (62% of total runs skipped). The frontier in Fig 2 is therefore biased toward low-K configurations on the largest proposer.",
+    "The compute axis here is INFERENCE FLOPs, not training FLOPs. Direct comparison of α values to Chinchilla's training-time exponents (α ≈ 0.5, β ≈ 0.5) is not meaningful — both the cost model and the loss surface are different.",
   ],
 
-  axisK: "K (trials, log)",
-  axisRelLoss: "Relative loss · lower is better",
-  axisAlpha: "α (test-time scaling exponent)",
-  tableCols: {
-    model: "Proposer model",
-    feedback: "Feedback",
-    alpha: "α",
-    r2: "r²",
-    kRange: "K range",
-  },
-  notes: {
-    f2HelpsWeak:
-      "Δα for F2 vs F0 — small bar means little to gain from rich feedback, big bar means it matters.",
-    saturation:
-      "Normalised score on the y-axis: 1.00 = best the harness has ever produced for this task. The 35B-F0 curve hits 0.99 already at K=8.",
-    smallModelWins:
-      "Best score reached on each task in any of our runs. Tasks ordered by problem size.",
-  },
+  exponentLabel: "exponent",
+  r2Label: "R²",
+  nLabel: "n",
+  taskColHeader: "Task",
+  modelColHeader: "Model",
+  fLabel: "F",
+  feedbackLabel: "Feedback",
 };
 
 const zh: Copy = {
-  pageTitle: "初步结果",
+  pageTitle: "Scaling Laws —— Chinchilla 2203.15556 镜像",
   pageSubtitle:
-    "目前 1194 个 grid run、3 个 proposer 模型、16+ 个任务，已经能稳定支持的四个结论。",
-  langButtonEN: "EN",
-  langButtonZH: "中",
+    "在现有 SESL grid 数据上，按 Hoffmann et al. (2022) 的图序复刻五张图。" +
+    "对应关系：模型参数 N → proposer active 参数；训练 token D → 搜索 token (K·T·W)；" +
+    "训练 FLOPs C → 推理 FLOPs (≈ N·K·T·W)；训练 loss L → 相对 regret R(K) = (hi − best@K) / (hi − best@1)。",
+
   asOf: "数据快照",
   backToDashboard: "← 仪表盘",
-  lead:
-    "SESL 是一个让 LLM 驱动的进化搜索在确定性目标上迭代代码、跑 K 个 trial 的 harness。" +
-    "我们测量 harness 在不同 K（trial 数）、不同反馈丰富度（F0 = 只给标量分数，F2 = 标量 + 诊断信息）、不同 proposer 模型大小下的 scaling 行为。" +
-    "下面四个结论在当前数据上稳定成立，是后续 paper 的主线。",
+  langEN: "EN",
+  langZH: "中",
 
-  finding1Title: "1 · Test-time scaling 服从幂律",
-  finding1Lead:
-    "在所有 (模型, 反馈) 组合上，归一化跨任务得分都拟合 R(K) = R∞ + A · K^-α。" +
-    "六条曲线都拟合得很干净 (r² ≥ 0.75)；目前观察到最强的 test-time scaling 指数是 α = 0.94（Qwen3.6-35B-A3B，F2 反馈）。",
-  finding1TableTitle: "幂律拟合（按 模型 × 反馈丰富度）",
-  finding1Reading:
-    "α 可以理解成 sample-efficiency 指数：每翻倍一次 trial 数，能多换回多少 regret。" +
-    "两个干净的信号：(a) proposer 越大，α 越大（35B ≫ 4B）；(b) 27B 的拟合质量较差，因为它从 K=1 起就接近上限（mean_norm ≈ 1.00），几乎没有 scaling 信号可学。",
+  setupTitle: "Setup",
+  setupBody:
+    "我们在 self-evolve harness 上复刻 Chinchilla 的三个 approach：LLM proposer 跑 K 个 trial，每个 trial " +
+    "最多用 T 个 thinking token，宽度 W 并行。" +
+    "相对 regret 是 Codex 建议的指标——它的 (hi − lo) 标度自然抵消，只需要一个稳定的 per-task 理论/观测上界。" +
+    "下面所有指数都直接在 R(K) 上拟合。",
 
-  finding2Title: "2 · 丰富反馈对弱模型的帮助远大于强模型",
-  finding2Lead:
-    "把反馈从 F0（仅标量）切到 F2（标量 + 诊断）能提升 α；但对小模型提升幅度远大于大模型。",
-  finding2Reading:
-    "如果反馈丰富度只是 harness 层面的一致改进，那它对所有模型应当带来差不多的提升。" +
-    "数据呈现相反趋势：4B 相对自身提升 +51%，35B 只提升 +4%。" +
-    "解读：35B 自己的先验已经足够从一个标量分数推断下一步该怎么改；而 4B 必须靠诊断信息才能知道当前候选错在哪里。" +
-    "这正对应 SESL 设计空间中的 'Seeing' 轴。",
-
-  finding3Title: "3 · 35B 在 K = 8–16 就饱和，但远未到最优",
-  finding3Lead:
-    "在组合优化任务上 35B 大约在 K ≈ 16 时就收敛到一个近似常数；" +
-    "但这个饱和点距离 MaxCut 的可达上界还差 25-43%。" +
-    "也就是说，这并不是理论上的收敛，而是模型陷入了启发式锁。",
-  finding3Reading:
-    "已通过单条 run 验证：在 maxcut60 上 35B 跑了 71 个 trial，但只产出 1 个唯一的有效得分 —— 每个 trial 都在重新发现同一个 greedy 启发式。" +
-    "对 scaling-law 研究的意义：当 α 看上去到顶时，那个顶很可能是模型的行为吸引子，而不是问题的最优解。" +
-    "已规划的破解手段（温度、岛屿 MAP-Elites）放在仪表盘的 Phase 4 队列里。",
-
-  finding4Title: "4 · 小模型在简单问题上反超大模型",
-  finding4Lead:
-    "在 rastrigin 所有规模 (8、16、50、100) 上 4B 都达到理论最优 (regret = 0)；" +
-    "在小规模组合任务 (maxcut60、maxcut100、tsp60) 上 4B 的最佳得分也优于 35B。" +
-    "只有等问题规模变大（大 circle-packing、大 maxcut、大 TSP），35B 才反超。",
-  finding4TableHead: {
-    task: "任务",
-    bestModel: "最优模型",
-    setting: "K · F",
-    bestValue: "最佳得分",
-  },
-  finding4Reading:
-    "和启发式锁结论一致：在不存在显著启发式的任务（rastrigin、小规模实例）上，35B 一上来就锁定一个差的启发式且不再探索，" +
-    "而 4B 的输出分布更松，反而能撞到全局最优。" +
-    "等实例足够大、多样化的启发式开始压过随机探索时，35B 才占优。",
-
-  limitsTitle: "局限 / 已知问题",
-  limits: [
-    "35B 在 K=128/256 时大量 trial 全 invalid (ALLINV)，后段曲线的有效样本比 headline 数字看起来要少；F4（最丰富反馈）在 K=256 上全部 ALLINV。",
-    "27B 数据稀疏（每个 (K,F) 单元只有 4-6 条 OK run）；α 拟合 r² 在 0.75-0.77，只能当 sanity-check。",
-    "maxcut 多样性扫描（温度 × n_islands）与 harness 轴扫描在 2026-05-20 被推理服务崩溃打断，尚未恢复。",
-    "本页所有数字来自公开 state.json bundle；底层 jsonl 在私有的 sesl-dev 仓库里。",
+  axisMapTitle: "轴对应关系",
+  axisMapRows: [
+    { chinchilla: "模型参数 N", sesl: "Proposer active 参数 N (B)",
+      note: "Qwen3.5-4B → 4.0，Qwen3.6-27B → 27.0，Qwen3.6-35B-A3B → 3.0 (active，MoE)" },
+    { chinchilla: "训练 token D", sesl: "搜索 token ≈ K · T · W",
+      note: "K trial × T 个 thinking token × W 并行" },
+    { chinchilla: "训练 FLOPs C ≈ 6·N·D", sesl: "推理 FLOPs C ≈ N · K · T · W",
+      note: "推理算力随 N_active 线性增长" },
+    { chinchilla: "验证 loss L", sesl: "相对 regret R(K) = (hi − best@K) / (hi − best@1)",
+      note: "标度无关；越小越好；地板取机器精度" },
   ],
 
-  whatsNextTitle: "下一步",
-  whatsNext: [
-    "Harness 轴：在 4B 上扫 islands × history_depth × summary_chars × temperature（信号/成本比最优）。",
-    "Maxcut 多样性扫描，测温度 / 岛屿 MAP-Elites 能否打破 35B 的启发式锁。",
-    "12 个 upstream 开放式任务 (MLS-Bench + Frontier-Engineering JobShop) — 已有 batch 跑出 1.5-33 秒的 per-trial 时间。",
+  fig1Title: "Figure 1 · 计算最优 N_opt(C) 与 K_opt(C)",
+  fig1Caption:
+    "推理算力下最优 proposer 大小、最优 trial 数的幂律拟合。镜像 Chinchilla Fig 1：两个面板分别是 " +
+    "N_opt(C) 和（此处）K_opt(C)，原文是 D_opt(C)。",
+  fig1Reading:
+    "K_opt 随算力陡增（这里 α_K ≈ 0.75），N_opt 接近平坦。" +
+    "Chinchilla 的训练场景里 N 和 D 都按 α ≈ 0.5 同时 scale（联合 Approach 3 结果）；" +
+    "在我们的推理时场景下，几乎所有边际算力都应该用来加 trial，而不是换更大的 proposer。",
+  fig1AxN: "N_opt (active 参数, B)",
+  fig1AxK: "K_opt (trial 数)",
+  fig1AxC: "推理 FLOPs C ≈ N·K·T·W",
+
+  fig2Title: "Figure 2 · Approach 1 —— 训练曲线 envelope",
+  fig2Caption:
+    "每条细线是一条 SESL run，绘制成（累计算力, 相对 regret）；颜色编码 proposer active 大小（黄 → 小，深蓝 → 大）。" +
+    "下包络（高亮）就是 compute-optimal frontier。直接对应 Chinchilla Fig 2 左。",
+  fig2Reading:
+    "下包络在推理算力上呈幂律。不同算力区间，不同模型主导前沿——正是 Chinchilla 在变 budget 下观察到的 cross-over。",
+  fig2AxC: "推理 FLOPs C (log)",
+  fig2AxLoss: "相对 regret R (log，越低越好)",
+
+  fig3Title: "Figure 3 · Approach 2 —— IsoCompute U-shape",
+  fig3Caption:
+    "在每个固定算力区间内，把相对 regret 对 proposer 大小作图。镜像 Chinchilla Fig 3 左。" +
+    "每条连线是一条 IsoFLOP profile；下方标记是 N_opt(C)。",
+  fig3Reading:
+    "由于只有三个 proposer 大小，U-shape 比较粗，N_opt 在区间之间是离散跳跃的。" +
+    "但定性 IsoFLOP 行为成立：小算力时小 proposer 占优，大算力时根据是否进入启发式锁，可能是小或大模型胜出。",
+  fig3AxN: "Proposer active 参数 N (log, B)",
+  fig3AxLoss: "几何平均相对 regret R (log)",
+
+  fig4Title: "Figure 4 · Approach 3 —— 参数化 L(N, K)",
+  fig4Caption:
+    "对每个任务做参数化拟合 L(N, K) = E + A·N^{−α_N} + B·K^{−α_K}；面板标题里报的是每种反馈下跨任务的指数中位数。" +
+    "(N, K) 平面上叠加等损耗曲线。镜像 Chinchilla Fig 4。",
+  fig4Reading:
+    "等损耗曲线朝 (小 N, 大 K) 角弯曲：" +
+    "在固定 regret 预算下，多 trial 换来的 reduction 比换大 proposer 更高效。",
+  fig4AxN: "N (B，log)",
+  fig4AxK: "K (log)",
+
+  fig5Title: "Figure 5 · 预测 vs 观测",
+  fig5Caption:
+    "Approach-3 拟合的预测值与所有 (task, model, F, K) 单元的实测均值散点。黑色 1:1 线。" +
+    "镜像 Chinchilla 的验证散点。",
+  fig5Reading:
+    "图上方报线性 R² 和 log-space R²。低 regret 单元被预测器低估时偏离对角线——这是参数化形式的残差：" +
+    "三参数拟合捕不到启发式锁和 invalid-output cliff。",
+  fig5AxObs: "实测平均 regret",
+  fig5AxPred: "预测 regret (Approach 3)",
+
+  appATitle: "附录 · 跨任务 α 分布",
+  appACaption:
+    "在所有任务上 K 轴指数 α 的分布，按 (proposer × feedback) 拆分。" +
+    "分布的宽幅，正对应 Chinchilla 看任务级拟合时观察到的分布依赖。",
+
+  caveatsTitle: "局限",
+  caveats: [
+    "T（thinking token 数）和 W（并行宽度）大多固定在 T=32768、W=8；这里真正变化的轴只有 K 和 proposer 大小。T 和 W 折叠到 C 里只是常数因子。",
+    "只有 3 个 proposer 大小，Approach 2 的 U-shape 比较粗，再加一个模型大小会更稳。",
+    "35B-A3B 在 K ≥ 128 时大量 run 全是 invalid（总 run 数的 62% 被剔除）。Fig 2 的 frontier 因此偏向低 K 的大模型配置。",
+    "这里的算力轴是推理 FLOPs，不是训练 FLOPs。这些 α 值不能直接和 Chinchilla 的训练时指数（α ≈ 0.5, β ≈ 0.5）做数值对比——成本模型和 loss 曲面都不同。",
   ],
 
-  axisK: "K (trial 数, log)",
-  axisRelLoss: "归一化损失 · 越低越好",
-  axisAlpha: "α (test-time scaling 指数)",
-  tableCols: {
-    model: "Proposer 模型",
-    feedback: "反馈",
-    alpha: "α",
-    r2: "r²",
-    kRange: "K 范围",
-  },
-  notes: {
-    f2HelpsWeak:
-      "F2 相对 F0 的 Δα；条短表示富反馈基本没用，条长表示富反馈关键。",
-    saturation:
-      "纵轴为归一化得分：1.00 = 当前 harness 在该任务上的历史最佳。35B-F0 在 K=8 就达到了 0.99。",
-    smallModelWins:
-      "各任务在所有 run 中的最佳得分；按问题规模排序。",
-  },
+  exponentLabel: "指数",
+  r2Label: "R²",
+  nLabel: "n",
+  taskColHeader: "任务",
+  modelColHeader: "模型",
+  fLabel: "F",
+  feedbackLabel: "反馈",
 };
 
 export const findingsCopy: Record<Lang, Copy> = { en, zh };
